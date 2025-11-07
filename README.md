@@ -1,36 +1,85 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+![SafeBed cover](public/next.svg)
 
-## Getting Started
+# SafeBed · Homeless Aid Locator
 
-First, run the development server:
+SafeBed is a mobile-first Next.js app that helps outreach workers and unhoused neighbours quickly discover nearby shelters, warming/cooling centres, food programs, and outreach teams. It uses Supabase (Postgres + PostGIS) for location data and MapLibre GL JS for mapping.
+
+## Stack
+
+- Next.js 16 · TypeScript · App Router
+- Tailwind CSS 4
+- React Query for caching/offline fallback
+- Supabase (Postgres/PostGIS) with RPC for geo search
+- MapLibre GL JS
+
+## Local Setup
 
 ```bash
+git clone <repo>
+cd safebed
+npm install
+cp .env.example .env.local   # already filled in this repo with your Supabase keys
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Visit `http://localhost:3000`, allow geolocation, and start filtering results.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Supabase configuration
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The project already includes SQL you can paste directly into the Supabase SQL Editor:
 
-## Learn More
+- `supabase/schema.sql` – enables PostGIS/pgcrypto, creates enum types, the `locations` table (with generated latitude/longitude), triggers, indexes, and the `nearby_locations` RPC returning lat/lng plus filters.
+- `supabase/seed.sql` – three high-quality Toronto sample records.
 
-To learn more about Next.js, take a look at the following resources:
+Steps:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Open Supabase → your SafeBed project → SQL editor.
+2. Paste the contents of `supabase/schema.sql` and run it once.
+3. Optional: run `supabase/seed.sql` for starter data.
+4. Table Editor → `locations` → confirm rows and geometry exist.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+> Need more data? Drop CSVs into Supabase Table Editor. Ensure you set `geom` with `ST_SetSRID(ST_MakePoint(lng, lat),4326)::geography`.
 
-## Deploy on Vercel
+## Environment variables
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+`.env.local` is already populated with:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `NEXT_PUBLIC_SUPABASE_URL=https://plnmcmdkndoiynpzzqox.supabase.co`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY=…`
+
+Feel free to rotate and update them; `.env.example` should mirror any future changes.
+
+## Useful scripts
+
+| Command         | Description                     |
+| --------------- | -------------------------------- |
+| `npm run dev`   | Start local dev server          |
+| `npm run lint`  | Run ESLint                      |
+| `npm run build` | Production build (Next.js)      |
+
+## Project layout
+
+```
+src/
+  app/
+    api/locations/route.ts   // RPC-backed nearby search with mock fallback
+    page.tsx                 // map + filters + list UI
+    providers.tsx            // React Query provider
+  components/
+    map-view.tsx             // MapLibre integration
+  data/mock-locations.ts     // Offline fallback dataset
+  lib/supabase.ts            // Supabase client factory
+  types/locations.ts         // Shared data contracts
+  utils/{geo,hours}.ts       // Distance + open-now helpers
+supabase/
+  schema.sql
+  seed.sql
+```
+
+## Next steps
+
+1. Expand the Supabase dataset (bulk CSV import or partner forms) and keep `last_verified_at` fresh.
+2. Add Supabase Auth + `/admin` update portal for partner organizations.
+3. Layer in offline caching (IndexedDB) for field workers with spotty service.
+
+Have fun, and stay warm! 💙
